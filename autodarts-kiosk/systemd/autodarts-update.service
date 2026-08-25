@@ -1,0 +1,11 @@
+[Unit]
+Description=Autodarts Desktop auf Updates pruefen und installieren
+Documentation=https://autodarts.com/downloads
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/autodarts-update.sh
+# Ein Fehlschlag (z. B. kein Netz) bleibt im Protokoll sichtbar und haelt
+# den Timer nicht auf - der naechste Lauf probiert es erneut.

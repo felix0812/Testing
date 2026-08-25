@@ -1,0 +1,24 @@
+[Unit]
+Description=Autodarts Desktop
+Documentation=https://autodarts.com/downloads
+After=graphical-session.target
+PartOf=graphical-session.target
+# Ein dauerhaft defektes Programm soll nicht endlos neu gestartet werden.
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+# Alte oder haengende Instanzen zuerst entfernen. Autodarts Desktop laesst
+# nur eine Instanz zu: findet ein Start eine bestehende vor, beendet er sich
+# kommentarlos mit Code 0 - genau das Verhalten, das wie "startet nicht"
+# aussieht. Das fuehrende Minus laesst den Start weiterlaufen, wenn nichts
+# zu beenden war.
+ExecStartPre=-/usr/bin/pkill -f /usr/lib/autodarts-desktop/autodarts-desktop
+ExecStartPre=/bin/sleep 2
+ExecStart=@EXEC@
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=graphical-session.target
