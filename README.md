@@ -10,6 +10,21 @@ Eine Website, die **ohne Server** läuft (einfach `index.html` im Browser öffne
 3. Oben rechts ⚙ → Schlüssel eintragen → speichern.
 4. Ort/PLZ eingeben oder „Standort“ klicken → **Suchen & tracken**.
 
+## Online über GitHub Pages (nur bei privatem Repo)
+
+Der Workflow `.github/workflows/pages.yml` veröffentlicht die Seite bei jedem Push auf `main` –
+**aber nur, solange das Repository privat ist**. Ist es öffentlich, wird nichts veröffentlicht.
+
+Einmalig einrichten:
+1. Repo auf privat stellen (Settings → General → Danger Zone → Change visibility).
+2. Settings → Pages → *Build and deployment* → Source: **GitHub Actions**.
+   (Pages aus privaten Repos braucht einen GitHub-Plan Pro, Team oder Enterprise.)
+3. Actions → „GitHub Pages“ → *Run workflow* (oder auf `main` pushen).
+
+Wichtig: Auch aus einem privaten Repo ist die Pages-Website selbst öffentlich erreichbar
+(Zugriffsbeschränkung gibt es nur bei GitHub Enterprise Cloud). Wird das Repo später öffentlich,
+bleibt die letzte Version online, bis Pages unter Settings → Pages deaktiviert wird.
+
 ## Funktionen
 
 - **Echte Preise** (Super E5, Super E10, Diesel) der Markttransparenzstelle für Kraftstoffe (MTS-K)
