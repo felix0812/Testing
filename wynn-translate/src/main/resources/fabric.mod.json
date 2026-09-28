@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "wynntranslate",
+  "version": "${version}",
+  "name": "WynnTranslate",
+  "description": "Übersetzt Wynncraft-NPC-Dialoge live in eine von 11 Sprachen. Translates Wynncraft NPC dialogue live into one of 11 languages.",
+  "authors": ["felix0812"],
+  "contact": { "sources": "https://github.com/felix0812/Testing" },
+  "license": "MIT",
+  "icon": "assets/wynntranslate/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.wynntranslate.WynnTranslateClient"],
+    "modmenu": ["dev.wynntranslate.compat.ModMenuIntegration"]
+  },
+  "mixins": ["wynntranslate.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "wynntils": "*"
+  }
+}
