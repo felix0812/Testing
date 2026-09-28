@@ -1,0 +1,23 @@
+{
+  "key.wynntranslate.menu": "Open language menu",
+  "key.category.wynntranslate.main": "WynnTranslate",
+  "wynntranslate.screen.language.title": "WynnTranslate – Choose language",
+  "wynntranslate.screen.language.subtitle": "Which language should NPC dialogue be translated into?",
+  "wynntranslate.screen.language.hint": "Press L or type /wtranslate to open this menu at any time",
+  "wynntranslate.screen.ask_on_join": "Ask when joining Wynncraft",
+  "wynntranslate.screen.settings": "Settings…",
+  "wynntranslate.screen.settings.title": "WynnTranslate – Settings",
+  "wynntranslate.option.enabled": "Translation",
+  "wynntranslate.option.position": "Position",
+  "wynntranslate.option.show_in_chat": "Also show in chat",
+  "wynntranslate.option.chat_dialogue": "Translate chat dialogue",
+  "wynntranslate.option.provider": "Service",
+  "wynntranslate.option.deepl_key": "DeepL API key (optional)",
+  "wynntranslate.option.deepl_key.hint": "empty = Google Translate",
+  "wynntranslate.option.clear_cache": "Clear saved translations",
+  "wynntranslate.position.top": "Top",
+  "wynntranslate.position.center": "Center",
+  "wynntranslate.position.bottom": "Bottom",
+  "wynntranslate.overlay.pending": "Translating …",
+  "wynntranslate.overlay.failed": "Translation unavailable (no connection?)"
+}

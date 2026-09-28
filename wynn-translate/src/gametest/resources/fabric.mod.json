@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "wynntranslate-gametest",
+  "version": "1.0.0",
+  "name": "WynnTranslate Game Test",
+  "environment": "client",
+  "entrypoints": { "fabric-client-gametest": ["dev.wynntranslate.gametest.WynnTranslateClientGameTest"] },
+  "depends": { "wynntranslate": "*" }
+}
