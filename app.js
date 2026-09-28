@@ -474,14 +474,22 @@ function renderList() {
 function initMap() {
   if (!window.L) { $('#map').innerHTML = '<div class="empty">Karte konnte nicht geladen werden (keine Internetverbindung?).</div>'; return; }
   state.map = L.map('map', { preferCanvas: true, zoomControl: true }).setView([51.1, 10.4], 6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '© OpenStreetMap-Mitwirkende',
-  }).addTo(state.map);
+  addTiles();
   state.layer = L.layerGroup().addTo(state.map);
   state.map.on('popupopen', e => {
     const btn = e.popup.getElement().querySelector('[data-station]');
     if (btn) btn.addEventListener('click', () => openDetail(btn.dataset.station));
   });
+}
+
+// Hintergrundkarte: TopPlusOpen (grau) des Bundesamts für Kartographie und Geodäsie.
+// Funktioniert ohne Schlüssel auch per file:// – tile.openstreetmap.org und CARTO blockieren
+// Anfragen ohne Referer.
+function addTiles() {
+  L.tileLayer('https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web_grau/default/WEBMERCATOR/{z}/{y}/{x}.png', {
+    maxZoom: 18,
+    attribution: '© <a href="https://gdz.bkg.bund.de/index.php/default/webdienste/topplus-produkte/wmts-topplusopen-wmts-topplus-open.html" target="_blank" rel="noopener">BKG</a> (' + new Date().getFullYear() + '), Datenquellen: <a href="https://sg.geodatenzentrum.de/web_public/gdz/datenquellen/Datenquellen_TopPlusOpen.html" target="_blank" rel="noopener">TopPlusOpen</a>',
+  }).addTo(state.map);
 }
 
 function hexToRgb(h) { const n = parseInt(h.replace('#', ''), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }

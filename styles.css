@@ -233,6 +233,12 @@ dialog label { display: flex; flex-direction: column; align-items: stretch; marg
 }
 footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 16px; }
 
+/* Dunkle Karte: graue Kacheln invertieren */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .leaflet-tile-pane { filter: invert(1) brightness(.85) contrast(.9); }
+}
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) brightness(.85) contrast(.9); }
+
 .leaflet-popup-content { font: 13px/1.4 system-ui, sans-serif; }
 .leaflet-popup-content button { margin-top: 6px; }
 

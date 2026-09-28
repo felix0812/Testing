@@ -15,7 +15,7 @@ Eine Website, die **ohne Server** läuft (einfach `index.html` im Browser öffne
 - **Echte Preise** (Super E5, Super E10, Diesel) der Markttransparenzstelle für Kraftstoffe (MTS-K)
   über die Tankerkönig-API – keine Fantasiewerte.
 - **Günstigste Tankstelle** hervorgehoben, Liste sortiert nach Preis, Entfernung, Öffnungsstatus.
-- **Karte** (OpenStreetMap) mit farbcodierten Preisen (blau = günstig, rot = teuer).
+- **Karte** (TopPlusOpen des BKG) mit farbcodierten Preisen (blau = günstig, rot = teuer).
 - **Deutschland-Scan**: fragt ganz Deutschland in einem Raster (289 Kreise à 25 km) ab und erfasst so
   alle ca. 14.000 Tankstellen. Gedrosselt, jederzeit stopp- und fortsetzbar.
 - **Tracking**: Jede Suche wird als Gebiet gespeichert; Auto-Update (5–60 Min.) erfasst jede
@@ -34,4 +34,4 @@ Eine Website, die **ohne Server** läuft (einfach `index.html` im Browser öffne
 - Bitte die API fair nutzen (Auto-Update nicht unter 5 Minuten, Deutschland-Scan nicht dauernd).
 
 Daten: [Tankerkönig](https://creativecommons.tankerkoenig.de) / MTS-K, Lizenz CC BY 4.0 ·
-Karte © OpenStreetMap-Mitwirkende · Angaben ohne Gewähr.
+Karte © Bundesamt für Kartographie und Geodäsie (TopPlusOpen, dl-de/by-2-0) · Angaben ohne Gewähr.
