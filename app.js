@@ -154,6 +154,70 @@ const DB = {
 function apiKey() { return (state.settings.apiKey || '').trim(); }
 const isDemo = () => apiKey() === DEMO_KEY;
 
+/* ---------- Demo-Modus: realistische simulierte Preise ----------
+   Der Demo-Schlüssel liefert echte Tankstellen, aber überall 1,009 €. Für ein realistisches
+   Bild werden die Preise hier simuliert: Grundpreis + Marke + Region + Autobahn + Tagesverlauf. */
+function hash01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 100000) / 100000;
+}
+const DEMO_BASE = { e5: 1.719, e10: 1.659, diesel: 1.599 };
+const DEMO_BRAND = { ARAL: 0.04, SHELL: 0.04, ESSO: 0.025, TOTALENERGIES: 0.025, TOTAL: 0.025, AVIA: 0.01, AGIP: 0.015, ENI: 0.015, 'AGIP ENI': 0.015,
+  JET: -0.02, STAR: -0.005, HEM: -0.015, ORLEN: -0.01, SPRINT: -0.02, 'FREIE TANKSTELLE': -0.01, RAIFFEISEN: -0.005, BFT: -0.01, GLOBUS: -0.035, KAUFLAND: -0.035, MARKANT: -0.02 };
+// typischer Tagesverlauf in Cent: Spitze morgens, günstigste Zeit abends, Sprung um 22 Uhr
+const DEMO_HOURS = [7, 7, 7, 7, 8, 9, 11, 12, 10, 8, 6, 7, 8, 6, 5, 6, 6, 4, 2, 0, -1, 0, 7, 7];
+
+function demoPrices(st, now = Date.now()) {
+  const id = st.id || '';
+  const r1 = hash01(id), r2 = hash01(id + 'b'), r3 = hash01(id + 'c');
+  const brand = brandKey(st.brand);
+  const brandOff = DEMO_BRAND[brand] ?? (r3 - 0.5) * 0.03;
+  const plz = String(st.postCode || '').padStart(5, '0');
+  const regionOff = (hash01('plz' + plz.slice(0, 2)) - 0.5) * 0.05;            // Regionen unterscheiden sich
+  const text = `${st.name} ${st.street}`.toUpperCase();
+  const autobahn = /\b(BAB|AUTOBAHN|RASTHOF|RASTSTÄTTE|RASTSTAETTE|AUTOHOF)\b|\bA ?\d{1,3}\b/.test(text) ? 0.16 : 0;
+  // jede Tankstelle reagiert etwas zeitversetzt (0–50 Min.) und passt Preise im 30-Min.-Takt an
+  const lag = r1 * 50 * 60000;
+  const slot = Math.floor((now - lag) / (30 * 60000));
+  const t = new Date(slot * 30 * 60000 + lag);
+  const hourOff = DEMO_HOURS[t.getHours()] / 100;
+  const dayIdx = Math.floor(t.getTime() / 86400000);
+  const dayOff = Math.sin(dayIdx / 3.1) * 0.02 + (hash01('day' + dayIdx) - 0.5) * 0.015;   // Schwankung über Tage
+  const noise = (hash01(id + slot) - 0.5) * 0.012;
+  const stationOff = (r2 - 0.5) * 0.04;
+  // manche Tankstellen haben nachts geschlossen
+  const nightClosed = r3 < 0.25 && (t.getHours() >= 22 || t.getHours() < 6);
+  const out = { ...st, isOpen: nightClosed ? false : st.isOpen !== false };
+  for (const f of FUEL_KEYS) {
+    const extra = f === 'diesel' ? (r2 - 0.5) * 0.02 : 0;
+    const v = DEMO_BASE[f] + brandOff + regionOff + autobahn + hourOff + dayOff + noise + stationOff + extra;
+    out[f] = Math.floor(v * 100) / 100 + 0.009;                                      // Preise enden auf 9
+  }
+  if (r1 > 0.93) out.diesel = null;                                                  // nicht jede bietet alles an
+  if (r2 > 0.95) out.e10 = null;
+  return out;
+}
+
+// Entfernt die unrealistischen 1,009-€-Einheitspreise früherer Demo-Abfragen
+async function purgeFlatDemoPrices() {
+  const flat = r => r.e5 != null && r.e5 === r.e10 && r.e10 === r.diesel;
+  const bad = new Set(state.history.filter(flat).map(r => r.sid));
+  const flatStations = [...state.stations.values()].filter(flat);
+  if (!bad.size && !flatStations.length) return 0;
+  const removed = state.history.filter(flat);
+  state.history = state.history.filter(r => !flat(r));
+  for (const st of flatStations) {
+    for (const f of FUEL_KEYS) st[f] = null;
+    st.min = {}; st.max = {}; st.priceTs = {};
+  }
+  try {
+    await DB.put('stations', flatStations);
+    for (const r of removed) if (r.k != null) await DB.del('prices', r.k);
+  } catch (e) { console.warn(e); }
+  return removed.length;
+}
+
 async function apiList(lat, lng, rad) {
   const key = apiKey();
   if (!key) throw new Error('Kein API-Schlüssel eingetragen');
@@ -165,7 +229,7 @@ async function apiList(lat, lng, rad) {
       if (r.status === 503 || r.status === 429) throw new Error('API überlastet (HTTP ' + r.status + ')');
       const j = await r.json();
       if (!j.ok) throw Object.assign(new Error(j.message || 'API-Fehler'), { fatal: true });
-      return j.stations || [];
+      return isDemo() ? (j.stations || []).map(st => demoPrices(st)) : (j.stations || []);
     } catch (e) {
       lastErr = e;
       if (e.fatal) break;
@@ -1015,6 +1079,7 @@ async function init() {
     console.warn(e);
     toast('Lokaler Speicher nicht verfügbar – Daten gehen beim Schließen verloren.', 6000);
   }
+  await purgeFlatDemoPrices();
   if (!window.Chart) toast('Diagramm-Bibliothek konnte nicht geladen werden (Internet nötig).', 6000);
   renderScanStatus();
   renderAll();
