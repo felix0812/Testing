@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TankRadar Deutschland</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">⛽</span>
+      <div>
+        <h1>TankRadar Deutschland</h1>
+        <p class="sub">Echte Spritpreise der Markttransparenzstelle (MTS-K) – live getrackt</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="statusLine" class="status-line">Noch keine Daten</span>
+      <label class="switch" title="Preise automatisch aktualisieren">
+        <input type="checkbox" id="autoRefresh"> <span>Auto-Update</span>
+      </label>
+      <button id="refreshBtn" class="btn">↻ Aktualisieren</button>
+      <button id="themeBtn" class="btn icon" title="Hell/Dunkel umschalten">◐</button>
+      <button id="settingsBtn" class="btn icon" title="Einstellungen">⚙</button>
+    </div>
+  </header>
+
+  <div id="keyBanner" class="banner" hidden>
+    <div>
+      <strong>API-Schlüssel benötigt.</strong>
+      Die echten Preise kommen von der Tankerkönig-API (Daten der Markttransparenzstelle für Kraftstoffe).
+      Hol dir kostenlos einen Schlüssel unter
+      <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>
+      und trage ihn in den Einstellungen ein.
+    </div>
+    <div class="banner-actions">
+      <button class="btn primary" data-open-settings>Schlüssel eintragen</button>
+      <button class="btn" id="demoBtn" title="Nur Testdaten – keine echten Preise">Demo (Testdaten)</button>
+    </div>
+  </div>
+  <div id="demoBanner" class="banner warn" hidden>
+    <strong>Demo-Modus:</strong> Echte Tankstellen, aber <em>simulierte Preise</em> (realistisch nachgebildet mit Marken-, Regions- und Tageszeit-Unterschieden – keine echten Marktpreise).
+    Für echte Preise bitte eigenen kostenlosen Schlüssel eintragen.
+  </div>
+
+  <main>
+    <section class="controls card">
+      <form id="searchForm" class="search-row">
+        <input id="searchInput" type="search" placeholder="Ort, PLZ oder Adresse (z. B. 10115 Berlin)" autocomplete="off">
+        <button type="button" id="locateBtn" class="btn" title="Meinen Standort verwenden">◎ Standort</button>
+        <label class="radius">Umkreis <input id="radiusInput" type="range" min="1" max="25" value="10"> <output id="radiusOut">10 km</output></label>
+        <button type="submit" class="btn primary">Suchen &amp; tracken</button>
+      </form>
+      <div class="filter-row">
+        <div class="seg" id="fuelSeg" role="tablist" aria-label="Kraftstoff">
+          <button type="button" data-fuel="e5">Super E5</button>
+          <button type="button" data-fuel="e10">Super E10</button>
+          <button type="button" data-fuel="diesel">Diesel</button>
+        </div>
+        <label>Gebiet
+          <select id="scopeSelect"><option value="all">Alle getrackten Tankstellen</option></select>
+        </label>
+        <label>Preise nicht älter als
+          <select id="ageSelect">
+            <option value="3600000">1 Stunde</option>
+            <option value="21600000">6 Stunden</option>
+            <option value="86400000" selected>24 Stunden</option>
+            <option value="604800000">7 Tage</option>
+            <option value="0">beliebig</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="onlyOpen" checked> nur geöffnete</label>
+      </div>
+    </section>
+
+    <section class="kpis" id="kpis" aria-live="polite"></section>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Karte &amp; Liste</button>
+      <button class="tab" data-tab="stats">Statistik</button>
+      <button class="tab" data-tab="areas">Gebiete &amp; Deutschland-Scan</button>
+      <button class="tab" data-tab="data">Daten</button>
+    </nav>
+
+    <section class="tabpanel active" id="tab-overview">
+      <div class="overview-grid">
+        <div class="card map-card">
+          <div id="map"></div>
+          <div class="map-legend">
+            <span>günstig</span><span class="grad"></span><span>teuer</span>
+            <span id="legendRange" class="muted"></span>
+          </div>
+        </div>
+        <div class="card list-card">
+          <div class="list-head">
+            <h2>Tankstellen nach Preis</h2>
+            <input id="listFilter" type="search" placeholder="Filtern (Marke, Ort, PLZ…)">
+          </div>
+          <div id="stationList" class="station-list"></div>
+          <button id="moreBtn" class="btn wide" hidden>Mehr anzeigen</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="tab-stats">
+      <div class="chart-toolbar">
+        <div class="seg" id="rangeSeg" aria-label="Zeitraum">
+          <button type="button" data-range="86400000">24 h</button>
+          <button type="button" data-range="604800000">7 Tage</button>
+          <button type="button" data-range="2592000000">30 Tage</button>
+          <button type="button" data-range="0">Alles</button>
+        </div>
+        <span class="muted small">Verläufe entstehen aus deinen eigenen Abfragen – je länger TankRadar läuft, desto aussagekräftiger.</span>
+      </div>
+      <div class="stats-grid">
+        <div class="card chart-card span2">
+          <h3>Durchschnittspreis im Zeitverlauf</h3>
+          <p class="muted small">Mittelwert über alle Tankstellen im gewählten Gebiet, €/Liter</p>
+          <div class="chart-box tall"><canvas id="chartTrend"></canvas></div>
+          <p class="empty-note" id="trendEmpty" hidden>Noch zu wenig Verlaufsdaten. Aktiviere Auto-Update oder aktualisiere später erneut.</p>
+        </div>
+        <div class="card chart-card">
+          <h3>Beste Tankzeit</h3>
+          <p class="muted small">Abweichung vom Tagesmittel je Uhrzeit, Cent (<span class="fuelName"></span>)</p>
+          <div class="chart-box"><canvas id="chartHours"></canvas></div>
+          <p class="empty-note" id="hoursEmpty" hidden>Braucht Daten über mindestens einen Tag.</p>
+        </div>
+        <div class="card chart-card">
+          <h3>Marken im Vergleich</h3>
+          <p class="muted small">Aufpreis ggü. der günstigsten Marke, Cent (<span class="fuelName"></span>, Ø aktuelle Preise)</p>
+          <div class="chart-box"><canvas id="chartBrands"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Preisverteilung</h3>
+          <p class="muted small">Anzahl Tankstellen je Preis (1-Cent-Schritte, <span class="fuelName"></span>)</p>
+          <div class="chart-box"><canvas id="chartHist"></canvas></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Kraftstoffe aktuell</h3>
+          <p class="muted small">Minimum · Durchschnitt · Maximum im Gebiet</p>
+          <div id="fuelTable"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Top 10 günstigste</h3>
+          <div id="topTable"></div>
+        </div>
+        <div class="card chart-card">
+          <h3>Regionen (PLZ-Bereiche)</h3>
+          <p class="muted small">Ø-Preis nach den ersten zwei PLZ-Ziffern, mind. 3 Tankstellen</p>
+          <div id="regionTable" class="scroll-table"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="tab-areas">
+      <div class="areas-grid">
+        <div class="card">
+          <h2>Getrackte Gebiete</h2>
+          <p class="muted small">Jede Suche wird als Gebiet gespeichert und bei jedem Update erneut abgefragt (1 Anfrage pro Gebiet).</p>
+          <div id="areaList"></div>
+        </div>
+        <div class="card">
+          <h2>Deutschland-Scan</h2>
+          <p>Fragt ganz Deutschland in einem Raster aus Kreisen mit 25 km Radius ab und erfasst damit <strong>alle</strong> rund 14.000 Tankstellen mit ihren aktuellen Preisen.</p>
+          <p class="muted small">Die Abfragen laufen gedrosselt nacheinander (<span id="gridCount"></span> Anfragen, ca. <span id="gridTime"></span> Min.), damit die kostenlose API fair genutzt wird. Der Scan kann jederzeit gestoppt und später fortgesetzt werden.</p>
+          <div class="progress"><div id="scanBar"></div></div>
+          <p id="scanStatus" class="small muted">Noch nicht gescannt.</p>
+          <div class="btn-row">
+            <button id="scanBtn" class="btn primary">Deutschland scannen</button>
+            <button id="scanStopBtn" class="btn" hidden>Stoppen</button>
+          </div>
+          <label class="check small"><input type="checkbox" id="nationalAuto"> Deutschland-Scan beim Auto-Update mit ausführen (frühestens alle 60 Min.)</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="tab-data">
+      <div class="card">
+        <h2>Gespeicherte Daten</h2>
+        <p id="dataInfo" class="muted"></p>
+        <p class="small muted">Alle Daten liegen nur lokal in deinem Browser (IndexedDB). Mit Export/Import kannst du sie sichern oder auf ein anderes Gerät übertragen.</p>
+        <div class="btn-row">
+          <button id="exportBtn" class="btn">Export (JSON)</button>
+          <button id="exportCsvBtn" class="btn">Preisverlauf als CSV</button>
+          <label class="btn">Import (JSON)<input id="importInput" type="file" accept=".json,application/json" hidden></label>
+          <button id="clearBtn" class="btn danger">Alle Daten löschen</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Preisdaten: <a href="https://creativecommons.tankerkoenig.de" target="_blank" rel="noopener">Tankerkönig</a> /
+    Markttransparenzstelle für Kraftstoffe (MTS-K), Lizenz CC BY 4.0 ·
+    Karte: © <a href="https://gdz.bkg.bund.de" target="_blank" rel="noopener">Bundesamt für Kartographie und Geodäsie</a> (TopPlusOpen, dl-de/by-2-0) ·
+    Angaben ohne Gewähr.
+  </footer>
+
+  <dialog id="settingsDlg">
+    <form method="dialog" id="settingsForm">
+      <h2>Einstellungen</h2>
+      <label>Tankerkönig API-Schlüssel
+        <input id="apiKeyInput" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellcheck="false">
+      </label>
+      <p class="small muted">Kostenlos unter <a href="https://onboarding.tankerkoenig.de" target="_blank" rel="noopener">onboarding.tankerkoenig.de</a>. Der Schlüssel wird nur lokal im Browser gespeichert.</p>
+      <label>Auto-Update alle
+        <select id="intervalInput">
+          <option value="5">5 Minuten</option>
+          <option value="10">10 Minuten</option>
+          <option value="15">15 Minuten</option>
+          <option value="30">30 Minuten</option>
+          <option value="60">60 Minuten</option>
+        </select>
+      </label>
+      <div class="btn-row end">
+        <button value="cancel" class="btn">Abbrechen</button>
+        <button value="save" id="saveSettings" class="btn primary">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDlg" class="wide-dlg">
+    <div id="detailBody"></div>
+    <div class="chart-box tall"><canvas id="chartStation"></canvas></div>
+    <p class="empty-note" id="stationEmpty" hidden>Für diese Tankstelle wurde bisher erst ein Preis erfasst.</p>
+    <form method="dialog" class="btn-row end"><button class="btn">Schließen</button></form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="germany.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
