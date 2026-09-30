@@ -31,6 +31,8 @@ Eine Website, die **ohne Server** läuft (einfach `index.html` im Browser öffne
 - Verläufe und Statistiken über die Zeit entstehen aus deinen eigenen Abfragen – je länger
   TankRadar geöffnet ist (Auto-Update), desto aussagekräftiger.
 - Der Demo-Schlüssel liefert echte Tankstellen, aber künstliche Preise – nur zum Ausprobieren.
+- Tankerkönig erlaubt pro Schlüssel **max. 1 Anfrage pro Minute**. TankRadar hält das automatisch ein
+  (Wartezeit wird oben angezeigt). Ein kompletter Deutschland-Scan dauert dadurch rund 5 Stunden.
 - Bitte die API fair nutzen (Auto-Update nicht unter 5 Minuten, Deutschland-Scan nicht dauernd).
 
 Daten: [Tankerkönig](https://creativecommons.tankerkoenig.de) / MTS-K, Lizenz CC BY 4.0 ·
