@@ -5,7 +5,8 @@ const API = 'https://creativecommons.tankerkoenig.de/json';
 const DEMO_KEY = '00000000-0000-0000-0000-000000000002';
 const FUELS = { e5: 'Super E5', e10: 'Super E10', diesel: 'Diesel' };
 const FUEL_KEYS = Object.keys(FUELS);
-const REQUEST_GAP = 1500;           // ms zwischen API-Anfragen (Drosselung)
+const REQUEST_GAP = 60000;          // ms zwischen API-Anfragen: Tankerkönig erlaubt max. 1 Anfrage pro Minute je Schlüssel
+const DEMO_REQUEST_GAP = 1500;      // Demo-Schlüssel: nur Testdaten, kürzere Drosselung
 const NATIONAL_MIN_GAP = 3600000;   // Deutschland-Scan per Auto-Update max. stündlich
 const HOUR = 3600000;
 
@@ -218,12 +219,25 @@ async function purgeFlatDemoPrices() {
   return removed.length;
 }
 
+// Hält den Mindestabstand zwischen zwei API-Anfragen ein – für alle Aufrufer (Suche, Auto-Update, Scan, Wiederholungen)
+let lastRequest = 0;
+async function waitForSlot() {
+  const gap = isDemo() ? DEMO_REQUEST_GAP : REQUEST_GAP;
+  let wait;
+  while ((wait = lastRequest + gap - Date.now()) > 0) {
+    if (wait > 2000) setStatus(`Warte auf API-Limit (1 Anfrage/Min.) … noch ${Math.ceil(wait / 1000)} s`);
+    await sleep(Math.min(wait, 1000));
+  }
+  lastRequest = Date.now();
+}
+
 async function apiList(lat, lng, rad) {
   const key = apiKey();
   if (!key) throw new Error('Kein API-Schlüssel eingetragen');
   const url = `${API}/list.php?lat=${lat}&lng=${lng}&rad=${rad}&sort=dist&type=all&apikey=${encodeURIComponent(key)}`;
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
+    await waitForSlot();
     try {
       const r = await fetch(url);
       if (r.status === 503 || r.status === 429) throw new Error('API überlastet (HTTP ' + r.status + ')');
@@ -340,7 +354,6 @@ async function refreshAll(manual = false) {
     for (let i = 0; i < state.areas.length; i++) {
       setStatus(`Aktualisiere ${state.areas[i].name} (${i + 1}/${state.areas.length}) …`);
       try { changes += (await fetchArea(state.areas[i])).changes; } catch (e) { errors++; console.warn(e); if (e.fatal) { toast(e.message); break; } }
-      if (i < state.areas.length - 1) await sleep(REQUEST_GAP);
     }
     saveMeta('lastUpdate', Date.now());
     if (manual || changes) toast(`${changes} Preisänderung${changes === 1 ? '' : 'en'} erfasst${errors ? `, ${errors} Fehler` : ''}.`);
@@ -391,7 +404,6 @@ async function scanGermany(auto = false) {
       saveMeta('national', { ...meta, next: done, running: true, finished: meta.finished || 0 });
       updateScanUi(done, `Scanne Deutschland … ${done}/${GRID.length} Rasterfelder, ${fmtNum(state.stations.size)} Tankstellen bekannt`);
       if (done % 15 === 0) renderAll();
-      if (done < GRID.length) await sleep(REQUEST_GAP);
     }
     const complete = !state.scanStop;
     const m2 = { ...loadMeta('national', {}), running: false };
@@ -415,7 +427,7 @@ function updateScanUi(done, text) {
 function renderScanStatus() {
   const m = loadMeta('national', null);
   $('#gridCount').textContent = GRID.length;
-  $('#gridTime').textContent = Math.ceil(GRID.length * (REQUEST_GAP + 400) / 60000);
+  $('#gridTime').textContent = Math.ceil(GRID.length * ((isDemo() ? DEMO_REQUEST_GAP : REQUEST_GAP) + 400) / 60000);
   if (!m) { updateScanUi(0, 'Noch nicht gescannt.'); $('#scanBtn').textContent = 'Deutschland scannen'; return; }
   const partial = m.next && m.next < GRID.length;
   updateScanUi(partial ? m.next : (m.finished ? GRID.length : 0),
