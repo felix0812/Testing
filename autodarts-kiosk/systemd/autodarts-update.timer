@@ -1,0 +1,14 @@
+[Unit]
+Description=Taegliche Update-Pruefung fuer Autodarts Desktop
+
+[Timer]
+# Frueh morgens, damit ein Neustart des Programms niemanden beim Spielen
+# stoert. Die Zufallsverzoegerung verteilt die Last auf dem Server.
+OnCalendar=*-*-* 05:30:00
+RandomizedDelaySec=30m
+# War der Rechner um 05:30 aus, wird die Pruefung nach dem Einschalten
+# nachgeholt.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
